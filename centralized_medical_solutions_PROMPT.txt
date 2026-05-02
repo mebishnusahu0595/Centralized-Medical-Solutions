@@ -375,6 +375,9 @@ GET    /analytics/compliance      → Compliance status across hospital
 ── AUDIT LOGS ─────────────────────────────────────────────
 GET    /audit-logs                → Paginated audit log (hospital-scoped or global)
 
+
+Done
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 6 — REAL-TIME (Socket.io)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -398,6 +401,7 @@ Events the client SENDS:
   join:hospital            → { hospitalId, token }
   notification:mark_read   → { notificationId }
 
+Done
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 7 — FRONTEND PAGES & ROUTES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -450,6 +454,8 @@ PROTECTED (auth required — wrapped in AuthGuard):
 SHARED:
   /notifications            → All notifications with read/unread
   /profile                  → User profile edit + change password
+
+Done
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 8 — MARKETING HOMEPAGE (exact sections)

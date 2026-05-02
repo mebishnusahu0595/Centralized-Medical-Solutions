@@ -1,0 +1,84 @@
+import express, { Express, Request, Response } from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import connectDB from './config/db';
+import authRoutes from './routes/authRoutes';
+import hospitalRoutes from './routes/hospitalRoutes';
+import userRoutes from './routes/userRoutes';
+import equipmentRoutes from './routes/equipmentRoutes';
+import maintenanceRoutes from './routes/maintenanceRoutes';
+import serviceReportRoutes from './routes/serviceReportRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import auditLogRoutes from './routes/auditLogRoutes';
+import leadRoutes from './routes/leadRoutes';
+import { errorHandler } from './middleware/errorHandler';
+
+dotenv.config();
+
+// Connect to MongoDB
+connectDB();
+
+const app: Express = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
+});
+
+import { initSocket } from './utils/socket';
+import { initCronJobs } from './utils/cronJobs';
+
+initSocket(io);
+initCronJobs();
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Static folder for uploads
+app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
+
+// Routes
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/hospitals', hospitalRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/equipment', equipmentRoutes);
+app.use('/api/v1/maintenance', maintenanceRoutes);
+app.use('/api/v1/service-reports', serviceReportRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/leads', leadRoutes);
+app.use('/api/v1/audit-logs', auditLogRoutes);
+
+// Basic health route
+app.get('/api/v1/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', message: 'CMS Backend API is running' });
+});
+
+// Error Handler
+app.use(errorHandler);
+
+
+
+const PORT = process.env.PORT || 5000;
+
+httpServer.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+});
+
+export { io };

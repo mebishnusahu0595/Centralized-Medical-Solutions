@@ -1,0 +1,64 @@
+'use client';
+
+import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/button';
+import { Bell, Search, LogOut, User as UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import api from '@/lib/axios';
+
+export default function Topbar() {
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+      logout();
+      router.push('/login');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      logout(); // Force local logout anyway
+      router.push('/login');
+    }
+  };
+
+  return (
+    <header className="h-16 border-b border-slate-100 bg-white sticky top-0 z-30 px-8 flex items-center justify-between">
+      <div className="flex-1 max-w-md relative hidden md:block">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <input 
+          type="text" 
+          placeholder="Search equipment, tickets, or users..." 
+          className="w-full bg-slate-50 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-medical-blue/20 outline-none transition-all"
+        />
+      </div>
+
+      <div className="flex items-center gap-4 ml-auto">
+        <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-medical-blue hover:bg-medical-blue/5">
+          <Bell size={20} />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+        </Button>
+
+        <div className="h-8 w-[1px] bg-slate-100 mx-2"></div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-bold text-medical-navy">{user?.name}</p>
+            <p className="text-[10px] text-slate-500 font-medium">{user?.hospitalId ? 'Hospital Portal' : 'Platform Control'}</p>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            className="text-slate-500 hover:text-red-500 hover:bg-red-50"
+            title="Logout"
+          >
+            <LogOut size={20} />
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
