@@ -15,6 +15,7 @@ export interface IServiceReport extends Document {
   resolvedAt?: Date;
   sla: {
     targetHours: number;
+    targetTime: Date;
     breached: boolean;
   };
   createdAt: Date;
@@ -49,6 +50,7 @@ const serviceReportSchema = new Schema<IServiceReport>(
     resolvedAt: { type: Date },
     sla: {
       targetHours: { type: Number, required: true },
+      targetTime: { type: Date, required: true },
       breached: { type: Boolean, default: false },
     },
   },

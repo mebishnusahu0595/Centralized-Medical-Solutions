@@ -6,7 +6,7 @@ export interface INotification extends Document {
   type: string;
   title: string;
   message: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'critical';
   isRead: boolean;
   link?: string;
   metadata?: any;
@@ -25,7 +25,7 @@ const notificationSchema = new Schema<INotification>(
     message: { type: String, required: true },
     priority: { 
       type: String, 
-      enum: ['low', 'medium', 'high'],
+      enum: ['low', 'medium', 'high', 'critical'],
       default: 'low'
     },
     isRead: { type: Boolean, default: false },

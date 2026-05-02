@@ -5,6 +5,7 @@ import User from '../models/User';
 import Equipment from '../models/Equipment';
 import { asyncHandler } from '../utils/asyncWrapper';
 import { AppError } from '../utils/AppError';
+import { logAction } from '../utils/auditLogger';
 
 // @desc    Get all hospitals
 // @route   GET /api/v1/hospitals
@@ -66,6 +67,9 @@ export const createHospital = asyncHandler(async (req: Request, res: Response, n
     createdBy: req.user?._id,
   });
 
+  await logAction(req, 'CREATE', 'Hospital', hospital._id.toString(), { name: hospital.name });
+  await logAction(req, 'CREATE', 'User', admin._id.toString(), { role: admin.role, email: admin.email });
+
   res.status(201).json({
     success: true,
     data: {
@@ -109,6 +113,8 @@ export const updateHospital = asyncHandler(async (req: Request, res: Response, n
     return next(new AppError('Hospital not found', 404));
   }
 
+  await logAction(req, 'UPDATE', 'Hospital', hospital._id.toString());
+
   res.status(200).json({
     success: true,
     data: hospital,
@@ -124,6 +130,8 @@ export const deleteHospital = asyncHandler(async (req: Request, res: Response, n
   if (!hospital) {
     return next(new AppError('Hospital not found', 404));
   }
+
+  await logAction(req, 'DELETE', 'Hospital', hospital._id.toString());
 
   res.status(200).json({
     success: true,

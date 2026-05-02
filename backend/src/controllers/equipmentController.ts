@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncWrapper';
 import { AppError } from '../utils/AppError';
 import { generateQRCode } from '../utils/qrcode';
 import { calculateNextMaintenanceDate } from '../utils/dateUtils';
+import { logAction } from '../utils/auditLogger';
 
 // @desc    Get all equipment
 // @route   GET /api/v1/equipment
@@ -67,6 +68,8 @@ export const createEquipment = asyncHandler(async (req: Request, res: Response, 
   equipment.qrCode = await generateQRCode(qrData);
   await equipment.save();
 
+  await logAction(req, 'CREATE', 'Equipment', equipment._id.toString(), { name: equipment.name });
+
   res.status(201).json({
     success: true,
     data: equipment,
@@ -109,6 +112,16 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response, 
     return next(new AppError('Not authorized to update this equipment', 403));
   }
 
+  // Decommissioned logic: No edit allowed
+  if (equipment.status === 'decommissioned') {
+    return next(new AppError('Decommissioned equipment cannot be edited', 400));
+  }
+
+  // Ensure status cannot be changed to decommissioned via update route (should use delete route)
+  if (req.body.status === 'decommissioned') {
+     return next(new AppError('Please use the decommission endpoint to retire equipment', 400));
+  }
+
   // Engineer can only update status and condition
   if (req.user?.role === 'engineer') {
     const allowedUpdates = ['status', 'condition'];
@@ -124,6 +137,12 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response, 
     new: true,
     runValidators: true,
   });
+
+  if (!equipment) {
+    return next(new AppError('Equipment not found', 404));
+  }
+
+  await logAction(req, 'UPDATE', 'Equipment', (equipment as any)._id.toString());
 
   res.status(200).json({
     success: true,
@@ -148,6 +167,8 @@ export const deleteEquipment = asyncHandler(async (req: Request, res: Response, 
   equipment.status = 'decommissioned';
   equipment.isActive = false;
   await equipment.save();
+
+  await logAction(req, 'DELETE', 'Equipment', (equipment as any)._id.toString());
 
   res.status(200).json({
     success: true,
@@ -220,6 +241,10 @@ export const uploadDocuments = asyncHandler(async (req: Request, res: Response, 
     return next(new AppError('Not authorized', 403));
   }
 
+  if (equipment.status === 'decommissioned') {
+    return next(new AppError('Cannot upload documents to decommissioned equipment', 400));
+  }
+
   const files = req.files as Express.Multer.File[];
   const newDocs = files.map(file => ({
     name: file.originalname,
@@ -253,6 +278,10 @@ export const uploadImages = asyncHandler(async (req: Request, res: Response, nex
 
   if (req.user?.role !== 'super_admin' && equipment.hospitalId.toString() !== req.user?.hospitalId?.toString()) {
     return next(new AppError('Not authorized', 403));
+  }
+
+  if (equipment.status === 'decommissioned') {
+    return next(new AppError('Cannot upload images to decommissioned equipment', 400));
   }
 
   const files = req.files as Express.Multer.File[];

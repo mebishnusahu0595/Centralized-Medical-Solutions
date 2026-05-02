@@ -7,7 +7,7 @@ import {
   deleteUser,
   forceResetPassword,
 } from '../controllers/userController';
-import { verifyToken, requireRole } from '../middleware/auth';
+import { verifyToken, requireRole, enforceHospitalScope } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import {
   createUserSchema,
@@ -18,6 +18,7 @@ import {
 const router = express.Router();
 
 router.use(verifyToken);
+router.use(enforceHospitalScope);
 router.use(requireRole(['super_admin', 'hospital_admin']));
 
 router.get('/', getUsers);

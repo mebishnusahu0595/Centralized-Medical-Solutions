@@ -7,7 +7,7 @@ import {
   assignServiceReport,
   resolveServiceReport
 } from '../controllers/serviceReportController';
-import { verifyToken, requireRole } from '../middleware/auth';
+import { verifyToken, requireRole, enforceHospitalScope } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import {
   createServiceReportSchema,
@@ -19,6 +19,7 @@ import {
 const router = express.Router();
 
 router.use(verifyToken);
+router.use(enforceHospitalScope);
 
 router.get('/', getServiceReports);
 router.post('/', validate(createServiceReportSchema), createServiceReport);

@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { rateLimit } from 'express-rate-limit';
+const xss = require('xss-clean');
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db';
@@ -49,6 +51,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(xss());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+});
+
+// Apply rate limiter to auth routes specifically as per prompt
+app.use('/api/v1/auth', limiter);
 
 // Static folder for uploads
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));

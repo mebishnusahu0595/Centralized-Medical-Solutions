@@ -18,28 +18,41 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.fieldname === 'images' || file.fieldname === 'beforeImages' || file.fieldname === 'afterImages') {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new AppError('Not an image! Please upload only images.', 400));
-    }
-  } else if (file.fieldname === 'documents' || file.fieldname === 'pdfReport') {
-    if (file.mimetype === 'application/pdf' || file.mimetype === 'application/msword' || file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      cb(null, true);
-    } else {
-      cb(new AppError('Invalid document format! Please upload PDF or Word documents.', 400));
-    }
-  } else {
+const imageFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype.startsWith('image/')) {
     cb(null, true);
+  } else {
+    cb(new AppError('Not an image! Please upload only images.', 400));
   }
 };
 
-const maxSize = parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10) * 1024 * 1024;
+const docFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new AppError('Invalid document format! Please upload PDF or Word documents.', 400));
+  }
+};
 
+export const uploadImage = multer({
+  storage: storage,
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+export const uploadDoc = multer({
+  storage: storage,
+  fileFilter: docFilter,
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+});
+
+// Legacy export for mixed or generic uploads
 export const upload = multer({
   storage: storage,
-  fileFilter: fileFilter,
-  limits: { fileSize: maxSize }
+  limits: { fileSize: 20 * 1024 * 1024 }
 });

@@ -59,6 +59,8 @@ export const createServiceReport = asyncHandler(async (req: Request, res: Respon
   }
 
   const targetHours = getSLAHours(priority);
+  const targetTime = new Date();
+  targetTime.setHours(targetTime.getHours() + targetHours);
 
   const report = await ServiceReport.create({
     ...req.body,
@@ -66,6 +68,7 @@ export const createServiceReport = asyncHandler(async (req: Request, res: Respon
     reportedBy: req.user?._id,
     sla: {
       targetHours,
+      targetTime,
       breached: false
     }
   });

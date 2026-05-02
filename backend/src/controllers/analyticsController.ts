@@ -3,7 +3,31 @@ import Hospital from '../models/Hospital';
 import Equipment from '../models/Equipment';
 import MaintenanceLog from '../models/MaintenanceLog';
 import ServiceReport from '../models/ServiceReport';
+import Notification from '../models/Notification';
 import { asyncHandler } from '../utils/asyncWrapper';
+
+// Helper to get start of current month
+const getStartOfMonth = () => {
+  const date = new Date();
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+};
+
+// Helper for monthly recurring revenue calculation
+const calculateMRR = (hospitals: any[]) => {
+  const pricing = {
+    free: 0,
+    basic: 999,
+    pro: 2499,
+    enterprise: 10000 // Placeholder for enterprise
+  };
+  
+  return hospitals.reduce((acc, h) => {
+    if (h.subscriptionStatus === 'active') {
+      return acc + (pricing[h.subscriptionPlan as keyof typeof pricing] || 0);
+    }
+    return acc;
+  }, 0);
+};
 
 // @desc    Dashboard KPIs
 // @route   GET /api/v1/analytics/dashboard
@@ -11,49 +35,196 @@ import { asyncHandler } from '../utils/asyncWrapper';
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const hospitalId = req.user?.hospitalId;
   const role = req.user?.role;
+  const userId = req.user?._id;
 
+  // --- SUPER ADMIN DASHBOARD ---
   if (role === 'super_admin') {
     const totalHospitals = await Hospital.countDocuments();
     const activeHospitals = await Hospital.countDocuments({ isActive: true });
+    const suspendedHospitals = await Hospital.countDocuments({ isActive: false });
     const totalEquipment = await Equipment.countDocuments();
     
+    // New hospitals this month
+    const newHospitalsThisMonth = await Hospital.countDocuments({
+      createdAt: { $gte: getStartOfMonth() }
+    });
+
+    // MRR
+    const allHospitals = await Hospital.find().select('subscriptionPlan subscriptionStatus');
+    const mrr = calculateMRR(allHospitals);
+
+    // Hospitals by subscription plan (donut chart data)
+    const subPlanStats = await Hospital.aggregate([
+      { $group: { _id: '$subscriptionPlan', count: { $sum: 1 } } }
+    ]);
+
+    // Top 5 hospitals by equipment count (bar chart data)
+    const topHospitals = await Equipment.aggregate([
+      { $group: { _id: '$hospitalId', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'hospitals',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'hospital'
+        }
+      },
+      { $unwind: '$hospital' },
+      { $project: { name: '$hospital.name', count: 1 } }
+    ]);
+
+    // Platform alerts (critical issues)
+    const platformAlerts = await Notification.find({ priority: 'critical' })
+      .sort('-createdAt')
+      .limit(10);
+
     return res.status(200).json({
       success: true,
       data: {
-        totalHospitals,
-        activeHospitals,
-        totalEquipment,
-        // More super admin specific stats
+        stats: {
+          totalHospitals,
+          activeHospitals,
+          suspendedHospitals,
+          totalEquipment,
+          newHospitalsThisMonth,
+          mrr
+        },
+        charts: {
+          subscriptionPlans: subPlanStats,
+          topHospitals
+        },
+        platformAlerts
       }
     });
   }
 
-  // Hospital Admin / Engineer / Staff stats
-  const totalEquipment = await Equipment.countDocuments({ hospitalId });
-  const activeEquipment = await Equipment.countDocuments({ hospitalId, status: 'active' });
-  const underMaintenance = await Equipment.countDocuments({ hospitalId, status: 'under_maintenance' });
-  const outOfService = await Equipment.countDocuments({ hospitalId, status: 'out_of_service' });
+  // --- HOSPITAL ADMIN DASHBOARD ---
+  if (role === 'hospital_admin') {
+    const totalEquipment = await Equipment.countDocuments({ hospitalId });
+    const statusStats = await Equipment.aggregate([
+      { $match: { hospitalId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
 
-  const openReports = await ServiceReport.countDocuments({ hospitalId, status: 'open' });
-  const maintenanceDue = await MaintenanceLog.countDocuments({ 
-    hospitalId, 
-    status: 'scheduled',
-    scheduledDate: { $lte: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000) }
-  });
+    // Maintenance due this week
+    const now = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(now.getDate() + 7);
+    const maintenanceDueThisWeek = await Equipment.countDocuments({
+      hospitalId,
+      nextMaintenanceDate: { $gte: now, $lte: nextWeek }
+    });
 
-  res.status(200).json({
-    success: true,
-    data: {
-      equipment: {
-        total: totalEquipment,
-        active: activeEquipment,
-        underMaintenance,
-        outOfService
+    // Open service reports by priority
+    const reportsByPriority = await ServiceReport.aggregate([
+      { $match: { hospitalId, status: { $ne: 'resolved' } } },
+      { $group: { _id: '$priority', count: { $sum: 1 } } }
+    ]);
+
+    // Compliance score
+    const compliantEquipment = await Equipment.countDocuments({
+      hospitalId,
+      complianceDueDate: { $gt: now }
+    });
+    const complianceScore = totalEquipment > 0 ? (compliantEquipment / totalEquipment) * 100 : 0;
+
+    // Condition distribution
+    const conditionStats = await Equipment.aggregate([
+      { $match: { hospitalId } },
+      { $group: { _id: '$condition', count: { $sum: 1 } } }
+    ]);
+
+    // Cost of maintenance (Last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const maintenanceCostMonthly = await MaintenanceLog.aggregate([
+      { 
+        $match: { 
+          hospitalId, 
+          status: 'completed', 
+          completedAt: { $gte: sixMonthsAgo } 
+        } 
       },
-      openReports,
-      maintenanceDue
-    }
-  });
+      {
+        $group: {
+          _id: { month: { $month: '$completedAt' }, year: { $year: '$completedAt' } },
+          totalCost: { $sum: '$totalCost' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Recently added equipment
+    const recentlyAdded = await Equipment.find({ hospitalId })
+      .sort('-createdAt')
+      .limit(5);
+
+    // Upcoming calendar
+    const upcomingMaintenance = await MaintenanceLog.find({
+      hospitalId,
+      status: 'scheduled',
+      scheduledDate: { $gte: now, $lte: nextWeek }
+    }).populate('equipmentId', 'name').limit(10);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        stats: {
+          totalEquipment,
+          maintenanceDueThisWeek,
+          complianceScore,
+          openReports: await ServiceReport.countDocuments({ hospitalId, status: { $ne: 'resolved' } })
+        },
+        charts: {
+          statusDistribution: statusStats,
+          conditionDistribution: conditionStats,
+          monthlyCosts: maintenanceCostMonthly
+        },
+        recentlyAdded,
+        upcomingMaintenance
+      }
+    });
+  }
+
+  // --- ENGINEER DASHBOARD ---
+  if (role === 'engineer') {
+    const assignedEquipmentCount = await Equipment.countDocuments({ assignedEngineer: userId });
+    
+    const now = new Date();
+    const startOfToday = new Date(now.setHours(0,0,0,0));
+    const endOfToday = new Date(now.setHours(23,59,59,999));
+    
+    const tasksDueToday = await MaintenanceLog.countDocuments({
+      engineerId: userId,
+      status: 'scheduled',
+      scheduledDate: { $gte: startOfToday, $lte: endOfToday }
+    });
+
+    const openReportsAssigned = await ServiceReport.countDocuments({
+      assignedTo: userId,
+      status: { $in: ['open', 'assigned', 'in_progress'] }
+    });
+
+    const completedThisMonth = await MaintenanceLog.countDocuments({
+      engineerId: userId,
+      status: 'completed',
+      completedAt: { $gte: getStartOfMonth() }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        assignedEquipmentCount,
+        tasksDueToday,
+        openReportsAssigned,
+        completedThisMonth
+      }
+    });
+  }
+
+  res.status(403).json({ success: false, message: 'Unauthorized role for dashboard' });
 });
 
 // @desc    Equipment stats (by category, status)
@@ -82,50 +253,6 @@ export const getEquipmentStats = asyncHandler(async (req: Request, res: Response
   });
 });
 
-// @desc    Maintenance stats
-// @route   GET /api/v1/analytics/maintenance
-// @access  Protected
-export const getMaintenanceStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const hospitalId = req.user?.hospitalId;
-  const query: any = hospitalId ? { hospitalId } : {};
-
-  const totalLogs = await MaintenanceLog.countDocuments(query);
-  const completedLogs = await MaintenanceLog.countDocuments({ ...query, status: 'completed' });
-
-  res.status(200).json({
-    success: true,
-    data: {
-      total: totalLogs,
-      completed: completedLogs,
-      completionRate: totalLogs > 0 ? (completedLogs / totalLogs) * 100 : 0
-    }
-  });
-});
-
-// @desc    (super_admin) All hospital stats
-// @route   GET /api/v1/analytics/hospitals
-// @access  Super Admin
-export const getAllHospitalStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const hospitals = await Hospital.find().select('name code subscriptionPlan subscriptionStatus');
-  
-  const stats = await Promise.all(hospitals.map(async (h) => {
-    const equipmentCount = await Equipment.countDocuments({ hospitalId: h._id });
-    return {
-      _id: h._id,
-      name: h.name,
-      code: h.code,
-      subscriptionPlan: h.subscriptionPlan,
-      subscriptionStatus: h.subscriptionStatus,
-      equipmentCount
-    };
-  }));
-
-  res.status(200).json({
-    success: true,
-    data: stats
-  });
-});
-
 // @desc    Compliance status across hospital
 // @route   GET /api/v1/analytics/compliance
 // @access  Protected
@@ -138,10 +265,57 @@ export const getComplianceStats = asyncHandler(async (req: Request, res: Respons
         complianceDueDate: { $lt: new Date() }
     });
 
+    const totalEquipment = await Equipment.countDocuments(query);
+
     res.status(200).json({
         success: true,
         data: {
-            overdueCompliance
+            overdueCompliance,
+            complianceScore: totalEquipment > 0 ? ((totalEquipment - overdueCompliance) / totalEquipment) * 100 : 0
         }
+    });
+});
+
+// @desc    Maintenance stats
+// @route   GET /api/v1/analytics/maintenance
+// @access  Protected
+export const getMaintenanceStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const hospitalId = req.user?.hospitalId;
+    const query: any = hospitalId ? { hospitalId } : {};
+  
+    const totalLogs = await MaintenanceLog.countDocuments(query);
+    const completedLogs = await MaintenanceLog.countDocuments({ ...query, status: 'completed' });
+  
+    res.status(200).json({
+      success: true,
+      data: {
+        total: totalLogs,
+        completed: completedLogs,
+        completionRate: totalLogs > 0 ? (completedLogs / totalLogs) * 100 : 0
+      }
+    });
+});
+
+// @desc    (super_admin) All hospital stats
+// @route   GET /api/v1/analytics/hospitals
+// @access  Super Admin
+export const getAllHospitalStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const hospitals = await Hospital.find().select('name code subscriptionPlan subscriptionStatus');
+    
+    const stats = await Promise.all(hospitals.map(async (h) => {
+      const equipmentCount = await Equipment.countDocuments({ hospitalId: h._id });
+      return {
+        _id: h._id,
+        name: h.name,
+        code: h.code,
+        subscriptionPlan: h.subscriptionPlan,
+        subscriptionStatus: h.subscriptionStatus,
+        equipmentCount
+      };
+    }));
+  
+    res.status(200).json({
+      success: true,
+      data: stats
     });
 });
