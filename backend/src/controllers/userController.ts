@@ -16,7 +16,9 @@ export const getUsers = asyncHandler(async (req: Request, res: Response, next: N
     query.hospitalId = req.query.hospitalId;
   }
 
-  const users = await User.find(query).select('-passwordHash -refreshToken');
+  const users = await User.find(query)
+    .populate('hospitalId', 'name code')
+    .select('-passwordHash -refreshToken');
 
   res.status(200).json({
     success: true,

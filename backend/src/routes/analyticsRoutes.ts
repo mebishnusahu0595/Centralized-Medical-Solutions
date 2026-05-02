@@ -5,6 +5,7 @@ import {
   getMaintenanceStats,
   getAllHospitalStats,
   getComplianceStats,
+  getPlatformAnalytics,
 } from '../controllers/analyticsController';
 import { verifyToken, requireRole } from '../middleware/auth';
 
@@ -19,5 +20,6 @@ router.get('/compliance', getComplianceStats);
 
 // Super admin only
 router.get('/hospitals', requireRole(['super_admin']), getAllHospitalStats);
+router.get('/platform', requireRole(['super_admin']), getPlatformAnalytics);
 
 export default router;

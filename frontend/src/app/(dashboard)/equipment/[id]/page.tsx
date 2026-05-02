@@ -21,7 +21,7 @@ import Image from 'next/image';
 export default function EquipmentDetailPage() {
   const { id } = useParams();
 
-  const { data: item, isLoading } = useQuery({
+  const { data: item, isLoading, error } = useQuery({
     queryKey: ['equipment', id],
     queryFn: async () => {
       const res = await api.get(`/equipment/${id}`);
@@ -29,8 +29,23 @@ export default function EquipmentDetailPage() {
     }
   });
 
-  if (isLoading) return <div>Loading details...</div>;
-  if (!item) return <div>Equipment not found</div>;
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+      <div className="w-8 h-8 border-4 border-medical-blue/20 border-t-medical-blue rounded-full animate-spin"></div>
+      <p className="text-slate-400 text-sm font-medium">Loading details...</p>
+    </div>
+  );
+
+  if (error || !item) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
+      <AlertCircle size={48} className="text-red-200 mb-4" />
+      <h3 className="text-lg font-bold text-medical-navy">Equipment Not Found</h3>
+      <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto mb-6">The equipment ID might be incorrect or you don't have access to this record.</p>
+      <Link href="/equipment">
+        <Button variant="outline" className="rounded-xl px-6">Back to Registry</Button>
+      </Link>
+    </div>
+  );
 
   return (
     <div className="space-y-8">

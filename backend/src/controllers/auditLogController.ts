@@ -18,6 +18,25 @@ export const getAuditLogs = asyncHandler(async (req: Request, res: Response, nex
     query.hospitalId = req.query.hospitalId;
   }
 
+  if (req.query.userId) {
+    query.userId = req.query.userId;
+  }
+
+  if (req.query.startDate || req.query.endDate) {
+    query.timestamp = {};
+    if (req.query.startDate) query.timestamp.$gte = new Date(req.query.startDate as string);
+    if (req.query.endDate) query.timestamp.$lte = new Date(req.query.endDate as string);
+  }
+
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search as string, 'i');
+    query.$or = [
+      { action: searchRegex },
+      { resource: searchRegex },
+      { ipAddress: searchRegex }
+    ];
+  }
+
   const logs = await AuditLog.find(query)
     .populate('userId', 'name email role')
     .sort('-timestamp')

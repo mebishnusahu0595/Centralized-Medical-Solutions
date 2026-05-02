@@ -367,3 +367,64 @@ export const generateMaintenanceReport = asyncHandler(async (req: Request, res: 
 
   res.send(pdf);
 });
+// @desc    Get maintenance summary
+// @route   GET /api/v1/maintenance/summary
+// @access  Protected
+export const getMaintenanceSummary = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const hospitalId = req.user?.hospitalId;
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const scheduled = await MaintenanceLog.countDocuments({ 
+    hospitalId, 
+    scheduledDate: { $gte: startOfMonth } 
+  });
+  const completed = await MaintenanceLog.countDocuments({ 
+    hospitalId, 
+    status: 'completed',
+    completedAt: { $gte: startOfMonth }
+  });
+  const pending = await MaintenanceLog.countDocuments({ 
+    hospitalId, 
+    status: 'scheduled',
+    scheduledDate: { $lt: new Date() }
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      scheduled,
+      completed,
+      pending,
+      complianceRate: scheduled > 0 ? Math.round((completed / scheduled) * 100) : 0
+    }
+  });
+});
+
+// @desc    Export maintenance logs to CSV
+// @route   GET /api/v1/maintenance/export
+// @access  Protected
+export const exportMaintenanceLogs = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  let query: any = {};
+  if (req.user?.role !== 'super_admin') {
+    query.hospitalId = req.user?.hospitalId;
+  }
+
+  const logs = await MaintenanceLog.find(query)
+    .populate('equipmentId', 'name equipmentCode')
+    .populate('engineerId', 'name')
+    .sort('-scheduledDate');
+
+  let csv = 'Equipment Name,Equipment Code,Status,Type,Scheduled Date,Completed Date,Cost,Engineer\n';
+  
+  logs.forEach(log => {
+    const equip = log.equipmentId as any;
+    const eng = log.engineerId as any;
+    csv += `"${equip?.name || ''}","${equip?.equipmentCode || ''}","${log.status}","${log.type}","${log.scheduledDate.toLocaleDateString()}","${log.completedAt ? log.completedAt.toLocaleDateString() : ''}","${log.totalCost || 0}","${eng?.name || ''}"\n`;
+  });
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename=maintenance_export_${Date.now()}.csv`);
+  res.status(200).send(csv);
+});

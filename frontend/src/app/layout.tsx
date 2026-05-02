@@ -3,6 +3,8 @@ import { DM_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import { Toaster } from "react-hot-toast";
+import UIProvider from "@/providers/UIProvider";
+import { Suspense } from "react";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -33,7 +35,11 @@ export default function RootLayout({
     >
       <body className="min-h-full font-sans text-[#0A1628]">
         <QueryProvider>
-          {children}
+          <Suspense fallback={null}>
+            <UIProvider>
+              {children}
+            </UIProvider>
+          </Suspense>
           <Toaster position="top-right" />
         </QueryProvider>
       </body>

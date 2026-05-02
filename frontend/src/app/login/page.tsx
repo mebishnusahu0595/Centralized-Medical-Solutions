@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
+import { ArrowLeft } from 'lucide-react';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -67,8 +69,7 @@ function LoginForm() {
             Forgot Password?
           </Link>
         </div>
-        <Input 
-          type="password" 
+        <PasswordInput 
           placeholder="••••••••" 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -94,12 +95,16 @@ export default function LoginPage() {
       {/* Left Side - Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
-          <Link href="/" className="flex items-center gap-2 mb-12">
-            <span className="text-3xl">⚕</span>
-            <span className="font-heading text-2xl font-bold tracking-tight text-medical-navy">
-              CMS
-            </span>
-          </Link>
+          <div className="flex items-center justify-between mb-12">
+            <Link href="/" className="flex items-center gap-3">
+              <img src="/images/image.png" alt="CMS Logo" className="h-10 w-auto" />
+            </Link>
+            <Link href="/">
+               <Button variant="ghost" size="sm" className="text-slate-500 gap-2 rounded-xl">
+                 <ArrowLeft size={16} /> Back to Home
+               </Button>
+            </Link>
+          </div>
 
           <h1 className="text-3xl font-bold text-medical-navy mb-2">Welcome Back</h1>
           <p className="text-slate-500 mb-8">Enter your credentials to access your facility dashboard.</p>
@@ -127,8 +132,8 @@ export default function LoginPage() {
         </div>
         
         <div className="relative z-10 max-w-lg text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 mb-8 mx-auto">
-            <span className="text-4xl text-white">⚕</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 mb-8 mx-auto overflow-hidden">
+            <img src="/images/image.png" alt="CMS Logo" className="w-12 h-12 object-contain brightness-0 invert" />
           </div>
           <h2 className="text-4xl font-bold text-white mb-6">Centralized Medical Solutions</h2>
           <p className="text-white/70 text-lg leading-relaxed">

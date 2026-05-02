@@ -6,6 +6,7 @@ import { Bell, Search, LogOut, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import NotificationPanel from './NotificationPanel';
 
 export default function Topbar() {
   const { user, logout } = useAuthStore();
@@ -35,10 +36,7 @@ export default function Topbar() {
       </div>
 
       <div className="flex items-center gap-4 ml-auto">
-        <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-medical-blue hover:bg-medical-blue/5">
-          <Bell size={20} />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </Button>
+        <NotificationPanel />
 
         <div className="h-8 w-[1px] bg-slate-100 mx-2"></div>
 

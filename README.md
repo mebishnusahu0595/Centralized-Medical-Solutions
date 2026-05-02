@@ -21,3 +21,6 @@ This is a project for centralized medical solutions.
 ## License
 
 [Add license information]
+
+Super Admin: superadmin@cms.com / Admin@123
+Hospital Admin: admin@shalom.com / Shalom@123

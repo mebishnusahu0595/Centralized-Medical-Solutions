@@ -1,0 +1,185 @@
+'use client';
+
+import { useState } from 'react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
+import api from '@/lib/axios';
+import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function AddHospitalModal() {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const logoFile = formData.get('logo') as File;
+    
+    // Construct the data object to be stringified (as per backend route handler)
+    const jsonData = {
+      name: formData.get('name'),
+      code: formData.get('code'),
+      subscriptionPlan: formData.get('subscriptionPlan'),
+      contactEmail: formData.get('contactEmail'),
+      adminName: formData.get('adminName'), // Added missing admin details
+      adminEmail: formData.get('adminEmail'),
+      adminPassword: formData.get('adminPassword'),
+      address: {
+        street: formData.get('street'),
+        city: formData.get('city'),
+        state: formData.get('state'),
+        pincode: formData.get('pincode'),
+      }
+    };
+
+    const finalData = new FormData();
+    finalData.append('data', JSON.stringify(jsonData));
+    if (logoFile) finalData.append('logo', logoFile);
+
+    try {
+      await api.post('/hospitals', finalData);
+      toast.success('Hospital onboarded successfully!');
+      setOpen(false);
+      setPreview(null);
+      queryClient.invalidateQueries({ queryKey: ['super-hospitals'] });
+      queryClient.invalidateQueries({ queryKey: ['super-stats'] });
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to onboard hospital.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-medical-blue hover:bg-medical-blue/90 text-white rounded-xl gap-2 h-11 px-6">
+          <Plus size={18} /> New Hospital
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl bg-white rounded-3xl p-8">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-medical-navy">Onboard New Hospital</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4 max-h-[70vh] overflow-y-auto px-1">
+          <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-2xl">
+            <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-white relative">
+              {preview ? (
+                <img src={preview} alt="Logo preview" className="w-full h-full object-cover" />
+              ) : (
+                <Plus className="text-slate-300" size={24} />
+              )}
+              <input 
+                type="file" 
+                name="logo" 
+                onChange={handleFileChange}
+                className="absolute inset-0 opacity-0 cursor-pointer" 
+                accept="image/*"
+              />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-medical-navy">Hospital Logo</h4>
+              <p className="text-xs text-slate-500 mt-1">Upload a high-resolution logo for the hospital portal. PNG or JPG preferred.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hospital Name</label>
+              <Input name="name" placeholder="City General Hospital" required className="rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hospital Code (Unique)</label>
+              <Input name="code" placeholder="CGH001" required className="rounded-xl" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Subscription Plan</label>
+              <select name="subscriptionPlan" className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-sm outline-none">
+                <option value="free">Free Trial</option>
+                <option value="basic">Basic</option>
+                <option value="pro">Professional</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Email</label>
+              <Input name="contactEmail" type="email" placeholder="admin@hospital.com" required className="rounded-xl" />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <h4 className="text-sm font-bold text-medical-navy uppercase tracking-widest">Admin Credentials</h4>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+              <Input name="adminName" placeholder="Dr. John Doe" required className="rounded-xl" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Login Email</label>
+                <Input name="adminEmail" type="email" placeholder="john@hospital.com" required className="rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
+                <Input name="adminPassword" type="password" placeholder="••••••••" required className="rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <h4 className="text-sm font-bold text-medical-navy uppercase tracking-widest">Location Details</h4>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Street Address</label>
+              <Input name="street" placeholder="Main Medical Road" className="rounded-xl" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">City</label>
+                <Input name="city" placeholder="Mumbai" className="rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">State</label>
+                <Input name="state" placeholder="Maharashtra" className="rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">PINCODE</label>
+                <Input name="pincode" placeholder="400001" className="rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6 flex gap-3">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="flex-1 rounded-xl">Cancel</Button>
+            <Button type="submit" disabled={loading} className="flex-1 bg-medical-navy text-white rounded-xl">
+              {loading ? 'Onboarding...' : 'Onboard Hospital'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

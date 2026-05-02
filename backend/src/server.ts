@@ -4,7 +4,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
-const xss = require('xss-clean');
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db';
@@ -18,6 +17,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import auditLogRoutes from './routes/auditLogRoutes';
 import leadRoutes from './routes/leadRoutes';
+import announcementRoutes from './routes/announcementRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -43,7 +43,16 @@ initSocket(io);
 initCronJobs();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:", "http://localhost:3000", "http://localhost:5000"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5000", "ws://localhost:5000"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
@@ -51,7 +60,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(xss());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -77,6 +85,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/leads', leadRoutes);
 app.use('/api/v1/audit-logs', auditLogRoutes);
+app.use('/api/v1/announcements', announcementRoutes);
 
 // Basic health route
 app.get('/api/v1/health', (req: Request, res: Response) => {

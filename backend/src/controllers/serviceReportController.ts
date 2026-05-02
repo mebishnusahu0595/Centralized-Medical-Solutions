@@ -73,10 +73,23 @@ export const createServiceReport = asyncHandler(async (req: Request, res: Respon
     }
   });
 
-  // If priority is critical, update equipment status
+  // If priority is critical, update equipment status and send email
   if (priority === 'critical') {
     equipment.status = 'out_of_service';
     await equipment.save();
+
+    // Send email alert to super admin
+    try {
+      const Hospital = require('../models/Hospital').default;
+      const hospital = await Hospital.findById(hospitalId || equipment.hospitalId);
+      const { sendCriticalIssueEmail } = require('../utils/email');
+      
+      // We pass the populated report if possible, or just the data
+      await sendCriticalIssueEmail(report, hospital, equipment);
+    } catch (emailError) {
+      console.error('Failed to send critical issue email:', emailError);
+      // We don't fail the request if email fails, but we log it
+    }
   }
 
   res.status(201).json({

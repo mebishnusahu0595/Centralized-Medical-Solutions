@@ -8,6 +8,8 @@ import {
   getUpcomingMaintenance,
   getMaintenanceCalendar,
   generateMaintenanceReport,
+  getMaintenanceSummary,
+  exportMaintenanceLogs,
 } from '../controllers/maintenanceController';
 import { verifyToken, requireRole, enforceHospitalScope } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -26,6 +28,8 @@ router.get('/', getMaintenanceLogs);
 router.post('/', requireRole(['super_admin', 'hospital_admin']), validate(createMaintenanceSchema), createMaintenanceLog);
 router.get('/upcoming', getUpcomingMaintenance);
 router.get('/calendar', getMaintenanceCalendar);
+router.get('/summary', getMaintenanceSummary);
+router.get('/export', exportMaintenanceLogs);
 router.get('/:id', getMaintenanceLog);
 router.patch('/:id', validate(updateMaintenanceSchema), updateMaintenanceLog);
 router.patch('/:id/complete', validate(completeMaintenanceSchema), completeMaintenanceLog);

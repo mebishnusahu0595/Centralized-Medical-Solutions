@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Search, Building2, ChevronRight, Globe, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { AddHospitalModal } from '@/components/super/AddHospitalModal';
 
 export default function HospitalsManagementPage() {
   const [search, setSearch] = useState('');
@@ -26,9 +27,7 @@ export default function HospitalsManagementPage() {
           <h1 className="text-3xl font-bold text-medical-navy mb-1">Hospital Management</h1>
           <p className="text-slate-500 text-sm">Onboard, monitor, and manage all hospitals on the platform.</p>
         </div>
-        <Button className="bg-medical-blue hover:bg-medical-blue/90 text-white rounded-xl gap-2 h-11 px-6">
-          <Plus size={18} /> New Hospital
-        </Button>
+        <AddHospitalModal />
       </div>
 
       <Card className="border-none shadow-sm overflow-hidden">
@@ -54,8 +53,16 @@ export default function HospitalsManagementPage() {
               hospitals?.map((h: any) => (
                 <div key={h._id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-medical-navy shrink-0">
-                      <Building2 size={24} />
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-medical-navy shrink-0 overflow-hidden">
+                      {h.logo ? (
+                        <img 
+                          src={`${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000'}${h.logo}`} 
+                          alt="Logo" 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <Building2 size={24} />
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-3">

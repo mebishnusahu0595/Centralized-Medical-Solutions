@@ -47,7 +47,7 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
   });
 
   res.status(200).json({
@@ -91,7 +91,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response, next: Ne
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
     });
 
     res.status(200).json({

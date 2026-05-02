@@ -51,6 +51,7 @@ export const createHospital = asyncHandler(async (req: Request, res: Response, n
     address,
     contactEmail,
     contactPhone,
+    logo: req.file ? `/uploads/${req.file.filename}` : undefined,
     subscriptionPlan: subscriptionPlan || 'free',
     createdBy: req.user?._id,
   });
@@ -94,9 +95,23 @@ export const getHospital = asyncHandler(async (req: Request, res: Response, next
     return next(new AppError('Hospital not found', 404));
   }
 
+  const equipmentStats = await Equipment.aggregate([
+    { $match: { hospitalId: hospital._id } },
+    { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        outOfService: { $sum: { $cond: [{ $eq: ["$status", "out_of_service"] }, 1, 0] } }
+    }}
+  ]);
+
+  const stats = equipmentStats[0] || { total: 0, outOfService: 0 };
+
   res.status(200).json({
     success: true,
-    data: hospital,
+    data: {
+      ...hospital.toObject(),
+      stats
+    },
   });
 });
 
@@ -104,10 +119,25 @@ export const getHospital = asyncHandler(async (req: Request, res: Response, next
 // @route   PATCH /api/v1/hospitals/:id
 // @access  Super Admin / Hospital Admin (own)
 export const updateHospital = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const hospital = await Hospital.findByIdAndUpdate(req.params.id, req.body, {
+  const updateData = { ...req.body };
+  
+  console.log('Update Hospital Request:', {
+    body: req.body,
+    file: req.file ? req.file.filename : 'No file',
+    params: req.params
+  });
+
+  if (req.file) {
+    updateData.logo = `/uploads/${req.file.filename}`;
+    console.log('Logo path being saved:', updateData.logo);
+  }
+
+  const hospital = await Hospital.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
     runValidators: true,
   });
+  
+  console.log('Hospital after update:', hospital?.name, 'Logo:', hospital?.logo);
 
   if (!hospital) {
     return next(new AppError('Hospital not found', 404));
@@ -144,12 +174,16 @@ export const deleteHospital = asyncHandler(async (req: Request, res: Response, n
 // @route   PATCH /api/v1/hospitals/:id/suspend
 // @access  Super Admin
 export const suspendHospital = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { status } = req.body;
-  const hospital = await Hospital.findByIdAndUpdate(req.params.id, { subscriptionStatus: status }, { new: true });
+  const hospital = await Hospital.findById(req.params.id);
 
   if (!hospital) {
     return next(new AppError('Hospital not found', 404));
   }
+
+  hospital.isActive = !hospital.isActive;
+  await hospital.save();
+
+  await logAction(req, 'UPDATE', 'Hospital', hospital._id.toString(), { isActive: hospital.isActive });
 
   res.status(200).json({
     success: true,

@@ -52,16 +52,16 @@ export const enforceHospitalScope = (req: Request, res: Response, next: NextFunc
     return next();
   }
 
-  // Ensure they belong to a hospital
+  // Ensure they belong to a hospital if not super_admin
   if (!req.user.hospitalId) {
-    return next(new AppError('User is not associated with any hospital', 403));
+    return next(new AppError('User is not associated with any hospital. Please contact support.', 403));
   }
 
-  // For GET requests or requests that have a hospitalId in params/body, validate it
+  // Validate hospitalId if provided in request
   const requestHospitalId = req.params.hospitalId || req.body.hospitalId || req.query.hospitalId;
 
-  if (requestHospitalId && requestHospitalId !== req.user.hospitalId.toString()) {
-    return next(new AppError('Not authorized to access data for this hospital', 403));
+  if (requestHospitalId && requestHospitalId.toString() !== req.user.hospitalId.toString()) {
+    return next(new AppError('Unauthorized: You cannot access data outside your assigned facility.', 403));
   }
 
   next();

@@ -16,9 +16,11 @@ import {
   MoreHorizontal, 
   ChevronRight,
   QrCode,
-  FileText
+  FileText,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { AddEquipmentModal } from '@/components/equipment/AddEquipmentModal';
 
 export default function EquipmentListPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,8 +29,9 @@ export default function EquipmentListPage() {
     queryKey: ['equipment', searchTerm],
     queryFn: async () => {
       const res = await api.get('/equipment', {
-        params: { search: searchTerm }
+        params: searchTerm ? { search: searchTerm } : {}
       });
+      console.log('Equipment Data:', res.data.data);
       return res.data.data;
     }
   });
@@ -49,11 +52,7 @@ export default function EquipmentListPage() {
           <h1 className="text-3xl font-bold text-medical-navy mb-1">Equipment Registry</h1>
           <p className="text-slate-500 text-sm">Manage and track all medical assets in your facility.</p>
         </div>
-        <Link href="/equipment/add">
-          <Button className="bg-medical-blue hover:bg-medical-blue/90 text-white rounded-xl gap-2 h-11">
-            <Plus size={18} /> Add Equipment
-          </Button>
-        </Link>
+        <AddEquipmentModal />
       </div>
 
       <Card className="border-none shadow-sm overflow-hidden">
@@ -89,50 +88,61 @@ export default function EquipmentListPage() {
                   [1, 2, 3, 4, 5].map(i => (
                     <tr key={i} className="animate-pulse">
                       <td colSpan={5} className="px-6 py-8">
-                        <div className="h-4 bg-slate-100 rounded w-1/2 mb-2"></div>
-                        <div className="h-3 bg-slate-50 rounded w-1/4"></div>
+                        <div className="flex gap-4">
+                          <div className="w-10 h-10 bg-slate-100 rounded-lg"></div>
+                          <div className="flex-1 space-y-2">
+                             <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+                             <div className="h-3 bg-slate-50 rounded w-1/4"></div>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))
-                ) : equipment?.length === 0 ? (
+                ) : (!Array.isArray(equipment) || equipment.length === 0) ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center text-slate-400">
-                      No equipment found matching your criteria.
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                       <div className="max-w-xs mx-auto">
+                          <Search className="mx-auto mb-4 text-slate-200" size={48} />
+                          <h3 className="text-lg font-bold text-medical-navy mb-1">No Assets Found</h3>
+                          <p className="text-slate-400 text-sm">We couldn't find any equipment matching your criteria or facility.</p>
+                       </div>
                     </td>
                   </tr>
                 ) : (
-                  equipment?.map((item: any) => (
+                  equipment.map((item: any) => (
                     <tr key={item._id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-medical-navy font-bold text-xs shrink-0">
-                            {item.category?.charAt(0) || 'E'}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-medical-blue/5 text-medical-blue flex items-center justify-center font-black text-xs shrink-0 border border-medical-blue/10">
+                            {item.category?.substring(0, 2).toUpperCase() || 'EQ'}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-medical-navy group-hover:text-medical-blue transition-colors">{item.name}</p>
-                            <p className="text-xs text-slate-500 font-mono">{item.equipmentCode}</p>
+                            <p className="text-sm font-bold text-medical-navy group-hover:text-medical-blue transition-colors line-clamp-1">{item.name}</p>
+                            <p className="text-[10px] text-slate-400 font-mono tracking-wider mt-0.5">{item.equipmentCode}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${getStatusColor(item.status)}`}>
+                      <td className="px-6 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusColor(item.status)}`}>
                           {item.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.department || 'General'}
+                      <td className="px-6 py-5">
+                         <div className="text-xs font-bold text-slate-600">{item.department || 'General Facility'}</div>
+                         <div className="text-[10px] text-slate-400 mt-0.5">{item.location?.room || 'All Blocks'}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.nextMaintenanceDate ? new Date(item.nextMaintenanceDate).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                           <Link href={`/equipment/${item._id}`}>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-medical-blue">
-                               <ChevronRight size={18} />
-                             </Button>
-                           </Link>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                          <CalendarIcon size={14} className="text-slate-300" />
+                          {item.nextMaintenanceDate ? new Date(item.nextMaintenanceDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not Scheduled'}
                         </div>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                         <Link href={`/equipment/${item._id}`}>
+                           <Button variant="ghost" size="sm" className="rounded-xl hover:bg-medical-blue/5 text-medical-blue font-bold text-xs gap-1">
+                             View <ChevronRight size={14} />
+                           </Button>
+                         </Link>
                       </td>
                     </tr>
                   ))

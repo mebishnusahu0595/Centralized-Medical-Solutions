@@ -62,12 +62,13 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-medical-navy text-white h-screen fixed left-0 top-0 z-40 flex flex-col">
-      <div className="p-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">⚕</span>
-          <span className="font-heading text-xl font-bold tracking-tight text-white">
-            CMS Dashboard
-          </span>
+      <div className="flex justify-center pt-8 pb-4">
+        <Link href="/" className="flex flex-col items-center gap-4">
+          <img 
+            src="/images/image.png" 
+            alt="CMS Logo" 
+            className="h-20 w-auto object-contain transition-transform hover:scale-105"
+          />
         </Link>
       </div>
 

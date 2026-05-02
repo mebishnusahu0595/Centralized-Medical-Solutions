@@ -4,10 +4,11 @@ import fs from 'fs';
 import { AppError } from '../utils/AppError';
 
 // Ensure upload directory exists
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+console.log('Upload directory initialized at:', uploadDir);
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {

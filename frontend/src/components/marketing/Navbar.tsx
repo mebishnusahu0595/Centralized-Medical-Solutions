@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 import { 
   Dialog, 
   DialogContent, 
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const { user, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,9 +33,9 @@ export default function Navbar() {
       scrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">⚕</span>
-          <span className="font-heading text-xl font-bold tracking-tight text-medical-navy">
+        <Link href="/" className="flex items-center gap-3">
+          <img src="/images/image.png" alt="CMS Logo" className="h-10 w-auto" />
+          <span className="font-heading text-xl font-extrabold tracking-tighter text-medical-navy hidden sm:block">
             Centralized Medical Solutions
           </span>
         </Link>
@@ -46,9 +48,15 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/login">
-            <Button variant="ghost" className="text-sm font-medium">Log In</Button>
-          </Link>
+          {isAuthenticated ? (
+            <Link href={user?.role === 'super_admin' ? '/super/dashboard' : '/dashboard'}>
+              <Button variant="ghost" className="text-sm font-bold text-medical-blue hover:bg-medical-blue/5">Dashboard</Button>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button variant="ghost" className="text-sm font-medium">Log In</Button>
+            </Link>
+          )}
           <Dialog>
             <DialogTrigger asChild>
               <Button className="bg-medical-blue hover:bg-medical-blue/90 text-white rounded-full px-6 font-bold shadow-lg shadow-medical-blue/20">

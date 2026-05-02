@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import toast from 'react-hot-toast';
+import { ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -25,12 +26,19 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-        <Link href="/" className="flex items-center gap-2 mb-12 justify-center">
-          <span className="text-3xl">⚕</span>
-          <span className="font-heading text-2xl font-bold tracking-tight text-medical-navy">
-            CMS
-          </span>
-        </Link>
+        <div className="flex items-center justify-between mb-12">
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/images/image.png" alt="CMS Logo" className="h-10 w-auto" />
+            <span className="font-heading text-2xl font-extrabold tracking-tighter text-medical-navy">
+              CMS
+            </span>
+          </Link>
+          <Link href="/login">
+             <Button variant="ghost" size="sm" className="text-slate-500 gap-2 rounded-xl">
+               <ArrowLeft size={16} /> Back to Login
+             </Button>
+          </Link>
+        </div>
 
         {!sent ? (
           <>

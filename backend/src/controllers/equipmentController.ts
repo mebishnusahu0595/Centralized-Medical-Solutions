@@ -23,7 +23,18 @@ export const getEquipments = asyncHandler(async (req: Request, res: Response, ne
   if (req.query.category) query.category = req.query.category;
   if (req.query.assignedEngineer) query.assignedEngineer = req.query.assignedEngineer;
 
+  // Search by name or code
+  if (req.query.search && typeof req.query.search === 'string' && req.query.search.trim() !== '') {
+    const searchRegex = new RegExp(req.query.search.trim(), 'i');
+    query.$or = [
+      { name: searchRegex },
+      { equipmentCode: searchRegex }
+    ];
+  }
+
+  console.log('Equipment Query:', JSON.stringify(query));
   const equipments = await Equipment.find(query).populate('assignedEngineer', 'name email').sort('-createdAt');
+  console.log('Equipments Found:', equipments.length);
 
   res.status(200).json({
     success: true,
