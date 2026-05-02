@@ -131,6 +131,22 @@ export default function UsersPage() {
                     <td colSpan={5} className="px-6 py-8 h-20 bg-slate-50/20"></td>
                   </tr>
                 ))
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-20 text-center text-slate-400">
+                    <XCircle size={48} className="mx-auto mb-4 text-red-500" />
+                    <p className="font-bold text-red-600 mb-2">Session Expired or Connection Error</p>
+                    <p className="text-xs mb-4">Please try logging out and in again.</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.location.reload()}
+                      className="rounded-xl"
+                    >
+                      Retry Connection
+                    </Button>
+                  </td>
+                </tr>
               ) : filteredUsers?.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-20 text-center text-slate-400">

@@ -53,6 +53,27 @@ export default function AnalyticsPage() {
     </div>
   );
 
+  if (error) return (
+    <div className="flex flex-col items-center justify-center min-h-[600px] gap-6 text-center">
+      <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+        <AlertTriangle size={32} />
+      </div>
+      <div>
+        <h2 className="text-xl font-bold text-medical-navy mb-2">Analytics Connection Failed</h2>
+        <p className="text-slate-500 text-sm max-w-md mx-auto">
+          We encountered a 401 Unauthorized error. This usually happens when your session has expired after a system update.
+        </p>
+      </div>
+      <div className="flex gap-4">
+        <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl">Retry</Button>
+        <Button onClick={() => {
+          useAuthStore.getState().logout();
+          window.location.href = '/login';
+        }} className="bg-medical-blue text-white rounded-xl">Re-login</Button>
+      </div>
+    </div>
+  );
+
   const statusData = analytics?.charts?.statusDistribution?.map((item: any) => ({
     name: item._id.replace('_', ' ').toUpperCase(),
     value: item.count
@@ -84,10 +105,14 @@ export default function AnalyticsPage() {
                </div>
                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded">Live</span>
              </div>
-             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Equipment Uptime</p>
-             <h3 className="text-3xl font-black text-medical-navy">98.2%</h3>
-             <p className="text-[10px] text-green-500 font-bold mt-2 flex items-center gap-1">
-               <TrendingUp size={12} /> +2.4% from last month
+             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Avg. Equipment Uptime</p>
+             <h3 className="text-3xl font-black text-medical-navy">
+               {analytics?.charts?.uptimeTrend?.length > 0 
+                 ? (analytics.charts.uptimeTrend.reduce((acc: number, curr: any) => acc + curr.uptime, 0) / analytics.charts.uptimeTrend.length).toFixed(1)
+                 : '100'}%
+             </h3>
+             <p className="text-[10px] text-emerald-500 font-bold mt-2 flex items-center gap-1">
+               <TrendingUp size={12} /> Real-time tracking active
              </p>
           </CardContent>
         </Card>

@@ -43,25 +43,28 @@ export const requireRole = (roles: Array<'super_admin' | 'hospital_admin' | 'eng
 
 // Enforce hospital scope (tenant isolation)
 export const enforceHospitalScope = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user) {
-    return next(new AppError('Not authorized', 401));
+  const user = req.user;
+
+  if (!user) {
+    return next(new AppError('Authentication required to access this resource', 401));
   }
 
   // super_admin bypasses hospital scope
-  if (req.user.role === 'super_admin') {
+  if (user.role === 'super_admin') {
     return next();
   }
 
   // Ensure they belong to a hospital if not super_admin
-  if (!req.user.hospitalId) {
-    return next(new AppError('User is not associated with any hospital. Please contact support.', 403));
+  const userHospitalId = user.hospitalId?.toString();
+  if (!userHospitalId) {
+    return next(new AppError('User profile is incomplete (missing Hospital ID). Please contact your administrator.', 403));
   }
 
-  // Validate hospitalId if provided in request
-  const requestHospitalId = req.params.hospitalId || req.body.hospitalId || req.query.hospitalId;
+  // Validate hospitalId if provided in request parameters, body, or query
+  const requestHospitalId = (req.params?.hospitalId || req.body?.hospitalId || req.query?.hospitalId)?.toString();
 
-  if (requestHospitalId && requestHospitalId.toString() !== req.user.hospitalId.toString()) {
-    return next(new AppError('Unauthorized: You cannot access data outside your assigned facility.', 403));
+  if (requestHospitalId && requestHospitalId !== userHospitalId) {
+    return next(new AppError('Security Violation: You do not have permission to access data from other facilities.', 403));
   }
 
   next();

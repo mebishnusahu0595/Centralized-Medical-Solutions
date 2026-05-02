@@ -20,6 +20,8 @@ export const getUsers = asyncHandler(async (req: Request, res: Response, next: N
     .populate('hospitalId', 'name code')
     .select('-passwordHash -refreshToken');
 
+  console.log(`[DEBUG] getUsers for role ${req.user?.role}: Found ${users.length} users with query:`, JSON.stringify(query));
+
   res.status(200).json({
     success: true,
     count: users.length,
